@@ -6,11 +6,16 @@ import com.fintech.wallet.event.WalletCreatedEvent;
 import com.fintech.wallet.event.WalletCreditedEvent;
 import com.fintech.wallet.event.WalletDebitedEvent;
 import com.fintech.wallet.query.projection.WalletProjection;
+import com.fintech.wallet.query.repository.ProcessedEvent;
+import com.fintech.wallet.query.repository.ProcessedEventRepository;
 import com.fintech.wallet.query.repository.WalletProjectionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
 
 @Component
 @RequiredArgsConstructor
@@ -18,13 +23,22 @@ import org.springframework.stereotype.Component;
 public class WalletEventConsumer {
 
     private final WalletProjectionRepository projectionRepository;
+    private final ProcessedEventRepository processedEventRepository;
     private final ObjectMapper objectMapper;
 
     @KafkaListener(topics = "${wallet.kafka.topic}", groupId = "${spring.kafka.consumer.group-id}")
+    @Transactional
     public void consume(String message) {
         try {
             JsonNode node = objectMapper.readTree(message);
+            String eventId = node.get("eventId").asText();
             String eventType = node.get("eventType").asText();
+
+            // Idempotency check
+            if (processedEventRepository.existsById(eventId)) {
+                log.info("Event [{}] already processed, skipping", eventId);
+                return;
+            }
 
             switch (eventType) {
                 case "WALLET_CREATED" -> {
@@ -57,6 +71,10 @@ public class WalletEventConsumer {
                 }
                 default -> log.warn("Unknown event type: {}", eventType);
             }
+
+            // Mark event as processed (same transaction as projection update)
+            processedEventRepository.save(new ProcessedEvent(eventId, Instant.now()));
+
         } catch (Exception ex) {
             log.error("Error processing wallet event", ex);
         }

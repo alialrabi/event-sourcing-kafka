@@ -2,6 +2,7 @@ package com.fintech.wallet.kafka;
 
 import com.fintech.wallet.eventstore.OutboxEntity;
 import com.fintech.wallet.eventstore.OutboxRepository;
+import com.fintech.wallet.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,7 +39,7 @@ public class OutboxScheduler {
                 log.info("Outbox published event [{}] for aggregate [{}]", outbox.getEventType(), outbox.getAggregateId());
             } catch (Exception e) {
                 log.error("Failed to publish outbox event id [{}], will retry", outbox.getId(), e);
-                break;
+                throw new BusinessException("Failed to publish event" );
             }
         }
     }
