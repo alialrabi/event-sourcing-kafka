@@ -12,6 +12,7 @@ import com.fintech.wallet.query.repository.WalletProjectionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,56 +29,55 @@ public class WalletEventConsumer {
 
     @KafkaListener(topics = "${wallet.kafka.topic}", groupId = "${spring.kafka.consumer.group-id}")
     @Transactional
-    public void consume(String message) {
-        try {
-            JsonNode node = objectMapper.readTree(message);
-            String eventId = node.get("eventId").asText();
-            String eventType = node.get("eventType").asText();
+    public void consume(String message, Acknowledgment ack) {
+        JsonNode node = objectMapper.readTree(message);
+        String eventId = node.get("eventId").asText();
+        String eventType = node.get("eventType").asText();
 
-            // Idempotency check
-            if (processedEventRepository.existsById(eventId)) {
-                log.info("Event [{}] already processed, skipping", eventId);
-                return;
-            }
-
-            switch (eventType) {
-                case "WALLET_CREATED" -> {
-                    WalletCreatedEvent e = objectMapper.readValue(message, WalletCreatedEvent.class);
-                    WalletProjection view = WalletProjection.builder()
-                            .walletId(e.getWalletId())
-                            .ownerId(e.getOwnerId())
-                            .balance(e.getInitialBalance())
-                            .createdAt(e.getOccurredAt())
-                            .updatedAt(e.getOccurredAt())
-                            .build();
-                    projectionRepository.save(view);
-                    log.info("Projection created for wallet [{}]", e.getWalletId());
-                }
-                case "WALLET_CREDITED" -> {
-                    WalletCreditedEvent e = objectMapper.readValue(message, WalletCreditedEvent.class);
-                    WalletProjection view = projectionRepository.findById(e.getWalletId()).orElseThrow();
-                    view.setBalance(view.getBalance().add(e.getAmount()));
-                    view.setUpdatedAt(e.getOccurredAt());
-                    projectionRepository.save(view);
-                    log.info("Projection credited for wallet [{}]", e.getWalletId());
-                }
-                case "WALLET_DEBITED" -> {
-                    WalletDebitedEvent e = objectMapper.readValue(message, WalletDebitedEvent.class);
-                    WalletProjection view = projectionRepository.findById(e.getWalletId()).orElseThrow();
-                    view.setBalance(view.getBalance().subtract(e.getAmount()));
-                    view.setUpdatedAt(e.getOccurredAt());
-                    projectionRepository.save(view);
-                    log.info("Projection debited for wallet [{}]", e.getWalletId());
-                }
-                default -> log.warn("Unknown event type: {}", eventType);
-            }
-
-            // Mark event as processed (same transaction as projection update)
-            processedEventRepository.save(new ProcessedEvent(eventId, Instant.now()));
-
-        } catch (Exception ex) {
-            log.error("Error processing wallet event", ex);
+        // Idempotency check
+        if (processedEventRepository.existsById(eventId)) {
+            log.info("Event [{}] already processed, skipping", eventId);
+            ack.acknowledge();
+            return;
         }
+
+        switch (eventType) {
+            case "WALLET_CREATED" -> {
+                WalletCreatedEvent e = objectMapper.readValue(message, WalletCreatedEvent.class);
+                WalletProjection view = WalletProjection.builder()
+                        .walletId(e.getWalletId())
+                        .ownerId(e.getOwnerId())
+                        .balance(e.getInitialBalance())
+                        .createdAt(e.getOccurredAt())
+                        .updatedAt(e.getOccurredAt())
+                        .build();
+                projectionRepository.save(view);
+                log.info("Projection created for wallet [{}]", e.getWalletId());
+            }
+            case "WALLET_CREDITED" -> {
+                WalletCreditedEvent e = objectMapper.readValue(message, WalletCreditedEvent.class);
+                WalletProjection view = projectionRepository.findById(e.getWalletId()).orElseThrow();
+                view.setBalance(view.getBalance().add(e.getAmount()));
+                view.setUpdatedAt(e.getOccurredAt());
+                projectionRepository.save(view);
+                log.info("Projection credited for wallet [{}]", e.getWalletId());
+            }
+            case "WALLET_DEBITED" -> {
+                WalletDebitedEvent e = objectMapper.readValue(message, WalletDebitedEvent.class);
+                WalletProjection view = projectionRepository.findById(e.getWalletId()).orElseThrow();
+                view.setBalance(view.getBalance().subtract(e.getAmount()));
+                view.setUpdatedAt(e.getOccurredAt());
+                projectionRepository.save(view);
+                log.info("Projection debited for wallet [{}]", e.getWalletId());
+            }
+            default -> log.warn("Unknown event type: {}", eventType);
+        }
+
+        // Mark event as processed (same transaction as projection update)
+        processedEventRepository.save(new ProcessedEvent(eventId, Instant.now()));
+
+        // Commit offset only after successful processing
+        ack.acknowledge();
     }
 }
 
