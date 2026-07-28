@@ -3,5 +3,5 @@ kind: ConfigMap
 metadata:
     name: app-config
 data:
-    DATABASE_URL: 
+    DATABASE_URL:
     KAFKA_BOOTSTRAP_SERVERS:
