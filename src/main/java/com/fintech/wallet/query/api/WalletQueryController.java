@@ -27,4 +27,9 @@ public class WalletQueryController {
         return ResponseEntity.ok(projectionRepository.findByOwnerId(ownerId));
     }
 
+    @GetMapping("/heath")
+    public ResponseEntity<String> health() {
+        return ResponseEntity.ok("Ali Alrebi");
+    }
+
 }

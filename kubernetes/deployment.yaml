@@ -1,23 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-    name: spring-app
+    name: wallet-app
 
 spec:
-    replicas: 2
+    replicas: 1
 
     selector:
         matchLabels:
-            app: spring-app
+            app: wallet-app
 
     template:
         metadata:
             labels:
-                app: spring-app
+                app: wallet-app
 
         spec:
             containers:
-                - name: spring-app
+                - name: wallet-app
                   image: alialrabi/e-wallet:latest
 
                   ports:
