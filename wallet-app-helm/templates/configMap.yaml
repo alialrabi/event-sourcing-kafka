@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+    name: app-config
+data:
+    DATABASE_URL: jdbc:postgresql://e-wallet.cqx4k4c48i9t.us-east-1.rds.amazonaws.com:5432/postgres
+    KAFKA_BOOTSTRAP_SERVERS: kafka-804f37e-aliali.a.aivencloud.com:13681

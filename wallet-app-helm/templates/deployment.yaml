@@ -4,7 +4,7 @@ metadata:
     name: wallet-app
 
 spec:
-    replicas: 1
+    replicas: {{ .Values.replicaCount }}
 
     selector:
         matchLabels:
@@ -18,10 +18,10 @@ spec:
         spec:
             containers:
                 - name: wallet-app
-                  image: alialrabi/e-wallet:latest
+                  image: "{{.Values.image.repository}}:{{.Values.image.tag}}"
 
                   ports:
-                      - containerPort: 8091
+                      - containerPort: {{ .Values.service.targetPort }}
 
                   envFrom:
 

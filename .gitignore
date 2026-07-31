@@ -1,4 +1,6 @@
 HELP.md
+credentials.txt
+credentials
 .gradle
 build/
 !gradle/wrapper/gradle-wrapper.jar
