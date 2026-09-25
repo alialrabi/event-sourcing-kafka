@@ -17,6 +17,8 @@ public class WalletQueryController {
 
     @GetMapping("/{walletId}")
     public ResponseEntity<WalletProjection> getWallet(@PathVariable String walletId) {
+     
+        
         return projectionRepository.findById(walletId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
