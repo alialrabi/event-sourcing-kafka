@@ -1,5 +1,6 @@
 package com.fintech.wallet.command.application;
 
+import lombok.extern.slf4j.Slf4j;
 import tools.jackson.databind.ObjectMapper;
 import com.fintech.wallet.command.domain.Wallet;
 import com.fintech.wallet.command.dto.CreateWalletRequest;
@@ -20,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -62,6 +64,7 @@ public class WalletCommandService {
     }
 
     private void saveAndPublish(Wallet wallet) {
+        log.info("start save and publish...");
         long version = eventStoreRepository
                 .findByAggregateIdOrderByVersionAsc(wallet.getWalletId()).size();
 
