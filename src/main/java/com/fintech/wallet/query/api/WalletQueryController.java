@@ -13,6 +13,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class WalletQueryController {
 
+
     private final WalletProjectionRepository projectionRepository;
 
     @GetMapping("/{walletId}")
